@@ -1,16 +1,43 @@
-# ambient_sound_app
+# 🧘 Focus Sounds App
 
-A new Flutter project.
+Um aplicativo de bem-estar desenvolvido em Flutter, projetado para auxiliar no foco e relaxamento através de sons ambientes (Chuva, Vento, Fogo). O projeto foca em uma arquitetura limpa, modular e com gerenciamento de estado eficiente.
 
-## Getting Started
+## 🚀 Funcionalidades
 
-This project is a starting point for a Flutter application.
+- **Sons Ambientes:** Reprodução em loop de áudios de alta qualidade.
+- **Temporizador Inteligente:** Opções de 15, 30 e 60 minutos com desligamento automático do áudio.
+- **Controle de Volume:** Slider integrado para ajuste fino da imersão.
+- **UI Responsiva:** Interface escura (Dark Theme) otimizada para reduzir a fadiga visual.
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Arquitetura e Tecnologias
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Este projeto foi estruturado seguindo princípios de **Clean Code** e **Componentização**:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Flutter & Dart:** Framework e linguagem base.
+- **Audioplayers:** Biblioteca para manipulação de fluxos de áudio.
+- **Modularização:** Separação clara entre inicialização (`main.dart`), telas (`screens/`) e componentes reaproveitáveis (`widgets/`).
+- **Gerenciamento de Estado:** Uso de `StatefulWidgets` com controle preciso do ciclo de vida do áudio e timers (evitando memory leaks com `dispose`).
+
+## 🛡️ Contexto de Cibersegurança
+
+Como desenvolvedor focado em segurança, este projeto serviu para explorar:
+- **Gerenciamento de Recursos:** Garantir que processos de áudio e timers sejam finalizados corretamente para evitar ataques de negação de serviço local por exaustão de memória.
+- **Arquitetura Modular:** Redução da superfície de ataque e facilidade em futuras auditorias de código através da separação de responsabilidades.
+
+## 📦 Como rodar o projeto
+
+1. Certifique-se de ter o [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado.
+2. Clone o repositório:
+   ```
+   git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+   ```
+3. Instale as dependências:
+   ```
+   flutter pub get
+   ```
+4. Execute o app:
+   ```
+   flutter run
+   ```
+
+Desenvolvido por [Jairo Vinicius Piekarski](https://linkedin.com/in/jairo-vinicius-piekarski-698959191/)
