@@ -50,7 +50,7 @@ class _HomePageState extends State<HomePage> {
           _remaningSeconds--;
         });
       } else {
-        _audioPlayer.stop();
+        _fadeOutAndStop();
         timer.cancel();
         setState(() {
           _currentSound = null;
@@ -59,6 +59,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Função para alterar o volume
   void _changeVolume(double newVolume) {
     setState(() {
       _volume = newVolume;
@@ -76,10 +77,9 @@ class _HomePageState extends State<HomePage> {
   // Função lógica para play/stop
   Future<void> _togglePlay(String fileName) async {
     if (_currentSound == fileName) {
-      // Se clicar no som atual , parar a reprodução
-      await _audioPlayer.stop();
-
       _timer?.cancel(); // Cancelar o temporizador se estiver ativo
+
+      _fadeOutAndStop();
 
       setState(() {
         _currentSound = null;
@@ -98,6 +98,32 @@ class _HomePageState extends State<HomePage> {
         _currentSound = fileName;
       });
     }
+  }
+
+  // Função para fazer o fade out e parar o áudio
+  Future<void> _fadeOutAndStop() async {
+    const int steps = 10;
+    double currentVolume = _volume;
+    final stepValue = _volume / steps;
+
+    for (int i = 0; i < steps; i++) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      currentVolume -= stepValue;
+
+      if (currentVolume < 0) currentVolume = 0;
+      await _audioPlayer.setVolume(currentVolume);
+    }
+
+    // Após o loop, parar o áudio
+    await _audioPlayer.stop();
+
+    setState(() {
+      _currentSound = null;
+      _remaningSeconds = 0;
+    });
+
+    //volta o volume original
+    await _audioPlayer.setVolume(_volume);
   }
 
   @override
