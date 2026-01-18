@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'sound_card.dart';
-import 'widgets/volume_slider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,7 +15,6 @@ class _HomePageState extends State<HomePage> {
   //final AudioPlayer _audioPlayer = AudioPlayer();
   final Map<String, AudioPlayer> _activePlayers = {};
   final Set<String> _selectedSounds = {};
-  String? _currentSound;
   Timer? _timer;
   int _remaningSeconds = 0;
   double _volume = 0.5;
@@ -28,8 +27,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Configurar o player para repetir o som continuamente
-    //_audioPlayer.setReleaseMode(ReleaseMode.loop);
+    _loadVolumes();
   }
 
   // Função para iniciar o temporizador
@@ -73,19 +71,17 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Função para alterar o volume
-
   // Função para volumes individuais dos sons
   void _onVolumeSliderChanged(String fileName, double newVolume) {
     setState(() {
       _individualVolumes[fileName] = newVolume;
     });
 
-    // Verificar se o player está ativo e atualizar o volume
-    final player = _activePlayers[fileName];
-    if (player != null) {
-      player.setVolume(newVolume);
-    }
+    // Atualizar volume em tempo real
+    _activePlayers[fileName]?.setVolume(newVolume);
+
+    // Salvar volume ajustado
+    _saveVolumes(fileName, newVolume);
   }
 
   // Função para formatar o tempo restante
@@ -133,6 +129,9 @@ class _HomePageState extends State<HomePage> {
         await newPlayer.setVolume(savedVolume);
 
         await newPlayer.play(AssetSource('sounds/$fileName'));
+
+        final initialVolume = _individualVolumes[fileName] ?? _volume;
+        await newPlayer.setVolume(initialVolume);
 
         setState(() {
           _activePlayers[fileName] = newPlayer;
@@ -188,6 +187,26 @@ class _HomePageState extends State<HomePage> {
     await player.stop();
     await player.dispose();
     _activePlayers.remove(fileName);
+  }
+
+  // Função para carregar volumes salvos
+  Future<void> _loadVolumes() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Buscar volumes salvos para cada som
+      _individualVolumes.keys.forEach((fileName) {
+        double? savedVol = prefs.getDouble('volume_$fileName');
+        if (savedVol != null) {
+          _individualVolumes[fileName] = savedVol;
+        }
+      });
+    });
+  }
+
+  // Função para salvar volumes
+  Future<void> _saveVolumes(String fileName, double volume) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('volume_$fileName', volume);
   }
 
   @override
