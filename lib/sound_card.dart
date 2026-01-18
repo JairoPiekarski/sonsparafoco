@@ -7,6 +7,8 @@ class SoundCard extends StatelessWidget {
   final Color color;
   final bool isPlaying;
   final VoidCallback onTap;
+  final double volume;
+  final ValueChanged<double> onVolumeChanged;
 
   const SoundCard({
     super.key,
@@ -16,6 +18,8 @@ class SoundCard extends StatelessWidget {
     required this.color,
     required this.isPlaying,
     required this.onTap,
+    required this.volume,
+    required this.onVolumeChanged,
   });
 
   @override
@@ -51,16 +55,36 @@ class SoundCard extends StatelessWidget {
                   color: isPlaying ? Colors.white : Colors.grey,
                 ),
               ),
+
+              // Se estiver tocando, mostrar slider de volume
               if (isPlaying)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0, vertical: 8.0),
+                  child: GestureDetector(
+                    onTap:
+                        () {}, // Evita que o GestureDetector pai capture o toque
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 2,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        thumbColor: Colors.white,
+                        activeTrackColor: color,
+                        inactiveTrackColor: color.withAlpha(50),
+                      ),
+                      child: Slider(
+                        value: volume,
+                        min: 0.0,
+                        max: 1.0,
+                        onChanged: onVolumeChanged,
+                      ),
+                    ),
                   ),
                 )
+              else
+                // Manter o espaço reservado para o slider
+                const SizedBox(height: 48),
             ],
           ),
         ));

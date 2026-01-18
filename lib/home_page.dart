@@ -19,6 +19,11 @@ class _HomePageState extends State<HomePage> {
   Timer? _timer;
   int _remaningSeconds = 0;
   double _volume = 0.5;
+  final Map<String, double> _individualVolumes = {
+    'rain.mp3': 0.5,
+    'burning-bush.mp3': 0.5,
+    'wind-draft.mp3': 0.5,
+  };
 
   @override
   void initState() {
@@ -28,7 +33,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Função para iniciar o temporizador
-  void _startTimer(int minutes) {
+  void _startTimer(double minutes) {
     // Se não houver som tocando, não iniciar o temporizador
     if (_selectedSounds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -43,7 +48,7 @@ class _HomePageState extends State<HomePage> {
 
     _timer?.cancel(); // Cancelar qualquer timer existente
     setState(() {
-      _remaningSeconds = minutes * 60;
+      _remaningSeconds = (minutes * 60).round();
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -69,14 +74,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Função para alterar o volume
-  void _changeVolume(double newVolume) {
+
+  // Função para volumes individuais dos sons
+  void _onVolumeSliderChanged(String fileName, double newVolume) {
     setState(() {
-      _volume = newVolume;
+      _individualVolumes[fileName] = newVolume;
     });
 
-    // Atualizar o volume de todos os players ativos
-    for (var player in _activePlayers.values) {
-      player.setVolume(_volume);
+    // Verificar se o player está ativo e atualizar o volume
+    final player = _activePlayers[fileName];
+    if (player != null) {
+      player.setVolume(newVolume);
     }
   }
 
@@ -116,14 +124,32 @@ class _HomePageState extends State<HomePage> {
       }
 
       final newPlayer = AudioPlayer();
-      await newPlayer.setReleaseMode(ReleaseMode.loop);
-      await newPlayer.setVolume(_volume);
-      await newPlayer.play(AssetSource('sounds/$fileName'));
 
-      setState(() {
-        _activePlayers[fileName] = newPlayer;
-        _selectedSounds.add(fileName);
-      });
+      try {
+        await newPlayer.setPlayerMode(PlayerMode.lowLatency);
+        await newPlayer.setReleaseMode(ReleaseMode.loop);
+
+        final savedVolume = _individualVolumes[fileName] ?? _volume;
+        await newPlayer.setVolume(savedVolume);
+
+        await newPlayer.play(AssetSource('sounds/$fileName'));
+
+        setState(() {
+          _activePlayers[fileName] = newPlayer;
+          _selectedSounds.add(fileName);
+        });
+      } catch (e) {
+        // Em caso de erro, liberar recursos do player
+        await newPlayer.dispose();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao tocar o som: $e'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
     }
   }
 
@@ -138,9 +164,11 @@ class _HomePageState extends State<HomePage> {
       _selectedSounds.remove(fileName);
     });
 
+    double startVolume = _individualVolumes[fileName] ?? _volume;
+
     const int steps = 10;
-    double currentVolume = _volume;
-    final stepValue = _volume / steps;
+    double currentVolume = startVolume;
+    final stepValue = startVolume / steps;
 
     // Loop de fade out
     for (int i = 0; i < steps; i++) {
@@ -207,7 +235,7 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _botaoRapido(1),
+              _botaoRapido(0.1),
               _botaoRapido(30),
               _botaoRapido(60),
               if (_remaningSeconds > 0)
@@ -224,12 +252,6 @@ class _HomePageState extends State<HomePage> {
                   },
                 )
             ],
-          ),
-
-          // Seção do controle de volume
-          VolumeSlider(
-            value: _volume,
-            onChanged: _changeVolume,
           ),
 
           const Divider(
@@ -252,6 +274,9 @@ class _HomePageState extends State<HomePage> {
                       icon: Icons.thunderstorm,
                       color: Colors.blue,
                       isPlaying: _selectedSounds.contains('rain.mp3'),
+                      volume: _individualVolumes['rain.mp3'] ?? 0.5,
+                      onVolumeChanged: (newVolume) =>
+                          _onVolumeSliderChanged('rain.mp3', newVolume),
                       onTap: () => _togglePlay('rain.mp3')),
                   SoundCard(
                       title: 'Floresta com figueira',
@@ -259,6 +284,9 @@ class _HomePageState extends State<HomePage> {
                       icon: Icons.forest,
                       color: Colors.green,
                       isPlaying: _selectedSounds.contains('burning-bush.mp3'),
+                      volume: _individualVolumes['burning-bush.mp3'] ?? 0.5,
+                      onVolumeChanged: (newVolume) =>
+                          _onVolumeSliderChanged('burning-bush.mp3', newVolume),
                       onTap: () => _togglePlay('burning-bush.mp3')),
                   SoundCard(
                       title: 'Vento',
@@ -266,6 +294,9 @@ class _HomePageState extends State<HomePage> {
                       icon: Icons.air,
                       color: Colors.teal,
                       isPlaying: _selectedSounds.contains('wind-draft.mp3'),
+                      volume: _individualVolumes['wind-draft.mp3'] ?? 0.5,
+                      onVolumeChanged: (newVolume) =>
+                          _onVolumeSliderChanged('wind-draft.mp3', newVolume),
                       onTap: () => _togglePlay('wind-draft.mp3')),
                 ],
               ),
@@ -275,7 +306,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Widget para criar botões rápidos de temporizador
-  Widget _botaoRapido(int minutes) {
+  Widget _botaoRapido(double minutes) {
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: ActionChip(
