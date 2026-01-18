@@ -5,11 +5,13 @@ version: 1.0.0+1
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
-dependencies: 
+dependencies:
   flutter:
     sdk: flutter
-  audioplayers: ^5.2.1
+  # audioplayers foi removido para evitar conflito de canal de áudio
   shared_preferences: ^2.5.4
+  audio_service: ^0.18.18
+  just_audio: ^0.10.5
 
 dev_dependencies: 
   flutter_test:
@@ -18,6 +20,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/sounds/rain.mp3
-    - assets/sounds/wind-draft.mp3
-    - assets/sounds/burning-bush.mp3
+    - assets/sounds/

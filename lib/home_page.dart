@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'main.dart';
 import 'sound_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,12 +12,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  //final AudioPlayer _audioPlayer = AudioPlayer();
-  final Map<String, AudioPlayer> _activePlayers = {};
   final Set<String> _selectedSounds = {};
   Timer? _timer;
   int _remaningSeconds = 0;
-  double _volume = 0.5;
   final Map<String, double> _individualVolumes = {
     'rain.mp3': 0.5,
     'burning-bush.mp3': 0.5,
@@ -34,13 +31,8 @@ class _HomePageState extends State<HomePage> {
   void _startTimer(double minutes) {
     // Se não houver som tocando, não iniciar o temporizador
     if (_selectedSounds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, selecione um som para tocar primeiro.'),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showSnackBar(
+          'Por favor, selecione ao menos um som para tocar primeiro.');
       return;
     }
 
@@ -51,37 +43,58 @@ class _HomePageState extends State<HomePage> {
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remaningSeconds > 0) {
-        setState(() {
-          _remaningSeconds--;
-        });
+        setState(() => _remaningSeconds--);
       } else {
         timer.cancel();
-
-        // Criar lista temporária para não dar erro enquanto remove itens do mapa
-        final activeSounds = List<String>.from(_selectedSounds);
-
-        for (var sound in activeSounds) {
-          _fadeOutAndStop(sound);
-        }
-
-        setState(() {
-          _remaningSeconds = 0;
-        });
+        _stopAllSounds();
       }
+    });
+  }
+
+  void _stopAllSounds() {
+    audioHandler.stop();
+    setState(() {
+      _selectedSounds.clear();
+      _remaningSeconds = 0;
     });
   }
 
   // Função para volumes individuais dos sons
   void _onVolumeSliderChanged(String fileName, double newVolume) {
+    audioHandler.setVolume(fileName, newVolume);
+
     setState(() {
       _individualVolumes[fileName] = newVolume;
     });
 
-    // Atualizar volume em tempo real
-    _activePlayers[fileName]?.setVolume(newVolume);
-
-    // Salvar volume ajustado
     _saveVolumes(fileName, newVolume);
+  }
+
+  // Função lógica para play/stop
+  Future<void> _togglePlay(String fileName) async {
+    if (_selectedSounds.contains(fileName)) {
+      await audioHandler.stopSoundWithFade(fileName);
+      setState(() => _selectedSounds.remove(fileName));
+    } else {
+      // Limitar a 2 sons simultâneos
+      if (_selectedSounds.length >= 2) {
+        _showSnackBar('Você pode tocar no máximo 2 sons ao mesmo tempo.');
+        return;
+      }
+
+      final volume = _individualVolumes[fileName] ?? 0.5;
+      await audioHandler.startSound(fileName, volume);
+
+      setState(() => _selectedSounds.add(fileName));
+    }
+  }
+
+  // Funções auxiliares
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   // Função para formatar o tempo restante
@@ -91,115 +104,16 @@ class _HomePageState extends State<HomePage> {
     return '$minutes:$seconds';
   }
 
-  // Função lógica para play/stop
-  Future<void> _togglePlay(String fileName) async {
-    if (_selectedSounds.contains(fileName)) {
-      final player = _activePlayers[fileName];
-
-      // Se o som já estiver tocando, parar
-      setState(() {
-        _selectedSounds.remove(fileName);
-      });
-
-      if (player != null) {
-        await player.stop();
-        await player.dispose();
-        _activePlayers.remove(fileName);
-      }
-    } else {
-      // Limitar a 2 sons simultâneos
-      if (_selectedSounds.length >= 2) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Você pode tocar no máximo 2 sons ao mesmo tempo.'),
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-
-      final newPlayer = AudioPlayer();
-
-      try {
-        await newPlayer.setPlayerMode(PlayerMode.lowLatency);
-        await newPlayer.setReleaseMode(ReleaseMode.loop);
-
-        final savedVolume = _individualVolumes[fileName] ?? _volume;
-        await newPlayer.setVolume(savedVolume);
-
-        await newPlayer.play(AssetSource('sounds/$fileName'));
-
-        final initialVolume = _individualVolumes[fileName] ?? _volume;
-        await newPlayer.setVolume(initialVolume);
-
-        setState(() {
-          _activePlayers[fileName] = newPlayer;
-          _selectedSounds.add(fileName);
-        });
-      } catch (e) {
-        // Em caso de erro, liberar recursos do player
-        await newPlayer.dispose();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao tocar o som: $e'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-    }
-  }
-
-  // Função para fazer o fade out e parar o áudio
-  Future<void> _fadeOutAndStop(String fileName) async {
-    // Obter o player ativo para o arquivo fornecido
-    final player = _activePlayers[fileName];
-    if (player == null) return;
-
-    // Remover do visual imediatamente
-    setState(() {
-      _selectedSounds.remove(fileName);
-    });
-
-    double startVolume = _individualVolumes[fileName] ?? _volume;
-
-    const int steps = 10;
-    double currentVolume = startVolume;
-    final stepValue = startVolume / steps;
-
-    // Loop de fade out
-    for (int i = 0; i < steps; i++) {
-      // Se o usuario clicar no som novamente, interrompe o fade out
-      if (_selectedSounds.contains(fileName)) {
-        return;
-      }
-
-      currentVolume -= stepValue;
-      if (currentVolume < 0) currentVolume = 0;
-
-      await player.setVolume(currentVolume);
-      await Future.delayed(const Duration(milliseconds: 150));
-    }
-
-    // Parar e limpar o player
-    await player.stop();
-    await player.dispose();
-    _activePlayers.remove(fileName);
-  }
-
   // Função para carregar volumes salvos
   Future<void> _loadVolumes() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      // Buscar volumes salvos para cada som
-      _individualVolumes.keys.forEach((fileName) {
-        double? savedVol = prefs.getDouble('volume_$fileName');
-        if (savedVol != null) {
-          _individualVolumes[fileName] = savedVol;
+      for (var fileName in _individualVolumes.keys) {
+        double? savedVolume = prefs.getDouble('volume_$fileName');
+        if (savedVolume != null) {
+          _individualVolumes[fileName] = savedVolume;
         }
-      });
+      }
     });
   }
 
@@ -213,11 +127,6 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     //_audioPlayer.dispose(); // Liberar recursos do player
     _timer?.cancel();
-
-    // Fechar todos os players ativos
-    for (var player in _activePlayers.values) {
-      player.dispose();
-    }
     super.dispose();
   }
 
