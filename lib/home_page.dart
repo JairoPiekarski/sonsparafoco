@@ -224,8 +224,12 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: const Text('Sons para focar'),
+          title: const Text(
+            'Sons para focar',
+            style: TextStyle(fontWeight: FontWeight.w300),
+          ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -244,84 +248,100 @@ class _HomePageState extends State<HomePage> {
               ))
           ],
         ),
-        body: Column(children: [
-          // Seção do temporizador
-          const Text(
-            "Desligar o som em:",
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _botaoRapido(0.1),
-              _botaoRapido(30),
-              _botaoRapido(60),
-              if (_remaningSeconds > 0)
-                IconButton(
-                  icon: const Icon(
-                    Icons.timer_off,
-                    color: Colors.redAccent,
-                  ),
-                  onPressed: () {
-                    _timer?.cancel();
-                    setState(() {
-                      _remaningSeconds = 0;
-                    });
-                  },
-                )
-            ],
-          ),
-
-          const Divider(
-            height: 1,
-            color: Colors.white10,
-          ),
-
-          // Seção dos cartões de som
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  SoundCard(
-                      title: 'Chuva',
-                      fileName: 'rain.mp3',
-                      icon: Icons.thunderstorm,
-                      color: Colors.blue,
-                      isPlaying: _selectedSounds.contains('rain.mp3'),
-                      volume: _individualVolumes['rain.mp3'] ?? 0.5,
-                      onVolumeChanged: (newVolume) =>
-                          _onVolumeSliderChanged('rain.mp3', newVolume),
-                      onTap: () => _togglePlay('rain.mp3')),
-                  SoundCard(
-                      title: 'Floresta com figueira',
-                      fileName: 'burning-bush.mp3',
-                      icon: Icons.forest,
-                      color: Colors.green,
-                      isPlaying: _selectedSounds.contains('burning-bush.mp3'),
-                      volume: _individualVolumes['burning-bush.mp3'] ?? 0.5,
-                      onVolumeChanged: (newVolume) =>
-                          _onVolumeSliderChanged('burning-bush.mp3', newVolume),
-                      onTap: () => _togglePlay('burning-bush.mp3')),
-                  SoundCard(
-                      title: 'Vento',
-                      fileName: 'wind-draft.mp3',
-                      icon: Icons.air,
-                      color: Colors.teal,
-                      isPlaying: _selectedSounds.contains('wind-draft.mp3'),
-                      volume: _individualVolumes['wind-draft.mp3'] ?? 0.5,
-                      onVolumeChanged: (newVolume) =>
-                          _onVolumeSliderChanged('wind-draft.mp3', newVolume),
-                      onTap: () => _togglePlay('wind-draft.mp3')),
-                ],
-              ),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0F2027),
+                Color(0xFF203A43),
+                Color(0xFF2C5364),
+              ],
             ),
           ),
-        ]));
+          child: SafeArea(
+              child: Column(children: [
+            // Seção do temporizador
+            const Text(
+              "Desligar o som em:",
+              style: TextStyle(color: Colors.white60),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _botaoRapido(0.1),
+                _botaoRapido(30),
+                _botaoRapido(60),
+                if (_remaningSeconds > 0)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.timer_off,
+                      color: Colors.redAccent,
+                    ),
+                    onPressed: () {
+                      _timer?.cancel();
+                      setState(() {
+                        _remaningSeconds = 0;
+                      });
+                    },
+                  )
+              ],
+            ),
+
+            const Divider(
+              height: 1,
+              color: Colors.white10,
+            ),
+
+            // Seção dos cartões de som
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  children: [
+                    SoundCard(
+                        title: 'Chuva',
+                        fileName: 'rain.mp3',
+                        icon: Icons.thunderstorm,
+                        color: Colors.blue,
+                        isPlaying: _selectedSounds.contains('rain.mp3'),
+                        volume: _individualVolumes['rain.mp3'] ?? 0.5,
+                        onVolumeChanged: (newVolume) =>
+                            _onVolumeSliderChanged('rain.mp3', newVolume),
+                        onTap: () => _togglePlay('rain.mp3')),
+                    SoundCard(
+                        title: 'Floresta com figueira',
+                        fileName: 'burning-bush.mp3',
+                        icon: Icons.forest,
+                        color: Colors.green,
+                        isPlaying: _selectedSounds.contains('burning-bush.mp3'),
+                        volume: _individualVolumes['burning-bush.mp3'] ?? 0.5,
+                        onVolumeChanged: (newVolume) => _onVolumeSliderChanged(
+                            'burning-bush.mp3', newVolume),
+                        onTap: () => _togglePlay('burning-bush.mp3')),
+                    SoundCard(
+                        title: 'Vento',
+                        fileName: 'wind-draft.mp3',
+                        icon: Icons.air,
+                        color: Colors.teal,
+                        isPlaying: _selectedSounds.contains('wind-draft.mp3'),
+                        volume: _individualVolumes['wind-draft.mp3'] ?? 0.5,
+                        onVolumeChanged: (newVolume) =>
+                            _onVolumeSliderChanged('wind-draft.mp3', newVolume),
+                        onTap: () => _togglePlay('wind-draft.mp3')),
+                  ],
+                ),
+              ),
+            ),
+          ])),
+        ));
   }
 
   // Widget para criar botões rápidos de temporizador
@@ -330,11 +350,11 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: ActionChip(
           label: Text('$minutes min'),
-          backgroundColor: Colors.grey.withAlpha(30),
+          backgroundColor: Colors.white.withAlpha(15),
           onPressed: () => _startTimer(minutes),
           labelStyle: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: Colors.white70,
+            fontSize: 12,
           ),
         ));
   }
