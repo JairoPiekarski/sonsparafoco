@@ -41,7 +41,7 @@ class MyAudioHandler extends BaseAudioHandler {
     final player = AudioPlayer();
     try {
       // O just_audio precisa do caminho completo
-      await player.setAsset('assets/sounds/$fileName');
+      await player.setAsset(fileName);
       await player.setLoopMode(LoopMode.one);
       await player.setVolume(volume);
       player.play();

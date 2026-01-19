@@ -12,3 +12,23 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Arquivos de segredos e chaves (MUITO IMPORTANTE)
+*.jks
+*.keystore
+*.p12
+*.key
+android/key.properties
+ios/Runner/sentinel
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Configurações locais do SDK (evita erros de "caminho não encontrado" em outros PCs)
+android/local.properties
+
+# Variáveis de ambiente (se você usar chaves de API no futuro)
+.env*
+
+# Caches de ferramentas e sistemas operacionais
+.toolchain/
+Thumbs.db

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../models/sound_model.dart';
 
 class SoundCard extends StatefulWidget {
-  final String title;
-  final String fileName;
-  final IconData icon;
+  final SoundModel sound;
   final Color color;
   final bool isPlaying;
   final VoidCallback onTap;
@@ -12,9 +11,7 @@ class SoundCard extends StatefulWidget {
 
   const SoundCard({
     super.key,
-    required this.title,
-    required this.fileName,
-    required this.icon,
+    required this.sound,
     required this.color,
     required this.isPlaying,
     required this.onTap,
@@ -92,15 +89,14 @@ class _SoundCardState extends State<SoundCard>
                         ),
                       )
                     : const AlwaysStoppedAnimation(1.0),
-                child: Icon(
-                  widget.icon,
-                  size: 48,
-                  color: widget.isPlaying ? widget.color : Colors.grey[400],
+                child: Text(
+                  widget.sound.icon,
+                  style: const TextStyle(fontSize: 48),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                widget.title,
+                widget.sound.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

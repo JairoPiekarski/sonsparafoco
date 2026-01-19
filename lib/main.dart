@@ -1,7 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'audio_handler.dart';
-import 'home_page.dart';
+import 'services/audio_handler.dart';
+import 'screens/home_page.dart';
 
 late MyAudioHandler audioHandler;
 

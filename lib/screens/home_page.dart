@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'main.dart';
-import 'sound_card.dart';
+import '../main.dart';
+import '../widgets/sound_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/sound_data.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,7 +12,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final Set<String> _selectedSounds = {};
   Timer? _timer;
   int _remaningSeconds = 0;
@@ -21,10 +23,32 @@ class _HomePageState extends State<HomePage> {
     'wind-draft.mp3': 0.5,
   };
 
+  late TabController _tabController;
+
+  int _currentTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
     _loadVolumes();
+
+    final categoriesCount =
+        allSounds.map((s) => s.category).toSet().toList().length;
+    _tabController = TabController(length: categoriesCount, vsync: this);
+
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        if (_currentTabIndex != _tabController.index) {
+          setState(() {
+            _currentTabIndex = _tabController.index;
+          });
+        }
+      } else {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+      }
+    });
   }
 
   // Função para iniciar o temporizador
@@ -72,6 +96,9 @@ class _HomePageState extends State<HomePage> {
 
   // Função lógica para play/stop
   Future<void> _togglePlay(String fileName) async {
+    print("--- DEBUG AUDIO ---");
+    print("O que o Flutter recebeu: '$fileName'");
+
     if (_selectedSounds.contains(fileName)) {
       await audioHandler.stopSoundWithFade(fileName);
       setState(() => _selectedSounds.remove(fileName));
@@ -132,11 +159,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final categories = allSounds.map((s) => s.category).toSet().toList();
+
+    final Map<String, List<Color>> categoryGradients = {
+      'Chuva': [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
+      'Natureza': [const Color(0xFF134E5E), const Color(0xFF71B280)],
+      'Fogo': [const Color(0xFFED213A), const Color(0xFF93291E)],
+    };
+
+    return DefaultTabController(
+      length: categories.length,
+      child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: AppBar(
           title: const Text(
-            'Sons para focar',
+            'Sons para Focar',
             style: TextStyle(fontWeight: FontWeight.w300),
           ),
           centerTitle: true,
@@ -145,37 +182,48 @@ class _HomePageState extends State<HomePage> {
           actions: [
             if (_remaningSeconds > 0)
               Center(
-                  child: Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: Text(
-                  _formatTime(_remaningSeconds),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orangeAccent,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Text(
+                    _formatTime(_remaningSeconds),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orangeAccent),
                   ),
                 ),
-              ))
+              ),
           ],
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.orangeAccent,
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.normal,
+            ),
+            tabs: categories.map((cat) => Tab(text: cat)).toList(),
+          ),
         ),
-        body: Container(
+        body: AnimatedContainer(
+          duration: const Duration(milliseconds: 600),
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F2027),
-                Color(0xFF203A43),
-                Color(0xFF2C5364),
-              ],
+              colors: categoryGradients[categories[_currentTabIndex]] ??
+                  [const Color(0xFF0F2027), const Color(0xFF2C5364)],
             ),
           ),
           child: SafeArea(
               child: Column(children: [
-            // Seção do temporizador
+            const SizedBox(height: 10),
             const Text(
-              "Desligar o som em:",
+              "Desligar som em:",
               style: TextStyle(color: Colors.white60),
             ),
             const SizedBox(height: 8),
@@ -200,57 +248,62 @@ class _HomePageState extends State<HomePage> {
                   )
               ],
             ),
-
             const Divider(
-              height: 1,
+              height: 20,
               color: Colors.white10,
             ),
-
-            // Seção dos cartões de som
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    SoundCard(
-                        title: 'Chuva',
-                        fileName: 'rain.mp3',
-                        icon: Icons.thunderstorm,
-                        color: Colors.blue,
-                        isPlaying: _selectedSounds.contains('rain.mp3'),
-                        volume: _individualVolumes['rain.mp3'] ?? 0.5,
+              child: TabBarView(
+                controller: _tabController,
+                children: categories.map((categoryName) {
+                  final filteredSounds = allSounds
+                      .where((sound) => sound.category == categoryName)
+                      .toList();
+
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.85,
+                    ),
+                    itemCount: filteredSounds.length,
+                    itemBuilder: (context, index) {
+                      final sound = filteredSounds[index];
+
+                      return SoundCard(
+                        sound: sound,
+                        color: _getCategoryColor(sound.category),
+                        isPlaying: _selectedSounds.contains(sound.path),
+                        onTap: () => _togglePlay(sound.path),
+                        volume: _individualVolumes[sound.path] ?? 0.5,
                         onVolumeChanged: (newVolume) =>
-                            _onVolumeSliderChanged('rain.mp3', newVolume),
-                        onTap: () => _togglePlay('rain.mp3')),
-                    SoundCard(
-                        title: 'Floresta com figueira',
-                        fileName: 'burning-bush.mp3',
-                        icon: Icons.forest,
-                        color: Colors.green,
-                        isPlaying: _selectedSounds.contains('burning-bush.mp3'),
-                        volume: _individualVolumes['burning-bush.mp3'] ?? 0.5,
-                        onVolumeChanged: (newVolume) => _onVolumeSliderChanged(
-                            'burning-bush.mp3', newVolume),
-                        onTap: () => _togglePlay('burning-bush.mp3')),
-                    SoundCard(
-                        title: 'Vento',
-                        fileName: 'wind-draft.mp3',
-                        icon: Icons.air,
-                        color: Colors.teal,
-                        isPlaying: _selectedSounds.contains('wind-draft.mp3'),
-                        volume: _individualVolumes['wind-draft.mp3'] ?? 0.5,
-                        onVolumeChanged: (newVolume) =>
-                            _onVolumeSliderChanged('wind-draft.mp3', newVolume),
-                        onTap: () => _togglePlay('wind-draft.mp3')),
-                  ],
-                ),
+                            _onVolumeSliderChanged(sound.path, newVolume),
+                      );
+                    },
+                  );
+                }).toList(),
               ),
             ),
           ])),
-        ));
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'Chuva':
+        return Colors.blueAccent;
+      case 'Natureza':
+        return Colors.greenAccent;
+      case 'Fogo':
+        return Colors.orangeAccent;
+      default:
+        return Colors.white70;
+    }
   }
 
   // Widget para criar botões rápidos de temporizador
