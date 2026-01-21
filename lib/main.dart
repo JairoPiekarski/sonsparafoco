@@ -2,12 +2,15 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'services/audio_handler.dart';
 import 'screens/home_page.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 late MyAudioHandler audioHandler;
 
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    await EasyLocalization.ensureInitialized();
 
     // Inicializar o serviço de audio e guardar variável global
     audioHandler = await AudioService.init(
@@ -20,7 +23,12 @@ Future<void> main() async {
       ),
     );
 
-    runApp(const CalmApp());
+    runApp(EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('pt')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      child: const CalmApp(),
+    ));
   } catch (e) {
     debugPrint("Erro na inicialização do áudio: $e");
   }
@@ -33,7 +41,10 @@ class CalmApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Sons para Foco',
+      title: 'app_title'.tr(),
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0F0F0F),
       ),

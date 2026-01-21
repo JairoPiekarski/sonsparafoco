@@ -4,6 +4,7 @@ import '../main.dart';
 import '../widgets/sound_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/sound_data.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -55,8 +56,7 @@ class _HomePageState extends State<HomePage>
   void _startTimer(double minutes) {
     // Se não houver som tocando, não iniciar o temporizador
     if (_selectedSounds.isEmpty) {
-      _showSnackBar(
-          'Por favor, selecione ao menos um som para tocar primeiro.');
+      _showSnackBar('no_sounds_timer'.tr());
       return;
     }
 
@@ -67,20 +67,30 @@ class _HomePageState extends State<HomePage>
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remaningSeconds > 0) {
-        setState(() => _remaningSeconds--);
-      } else {
+        setState(() {
+          _remaningSeconds--;
+        });
+      }
+
+      if (_remaningSeconds == 0) {
         timer.cancel();
         _stopAllSounds();
       }
     });
   }
 
-  void _stopAllSounds() {
-    audioHandler.stop();
+  Future<void> _stopAllSounds() async {
     setState(() {
       _selectedSounds.clear();
       _remaningSeconds = 0;
     });
+
+    try {
+      await audioHandler.customAction('stopAllWithFade');
+    } catch (e) {
+      audioHandler.stop();
+      debugPrint("Erro ao rodar fade: $e");
+    }
   }
 
   // Função para volumes individuais dos sons
@@ -105,7 +115,7 @@ class _HomePageState extends State<HomePage>
     } else {
       // Limitar a 2 sons simultâneos
       if (_selectedSounds.length >= 2) {
-        _showSnackBar('Você pode tocar no máximo 2 sons ao mesmo tempo.');
+        _showSnackBar('limit_reached'.tr());
         return;
       }
 
@@ -172,8 +182,8 @@ class _HomePageState extends State<HomePage>
       child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: const Text(
-            'Sons para Focar',
+          title: Text(
+            'app_title'.tr(),
             style: TextStyle(fontWeight: FontWeight.w300),
           ),
           centerTitle: true,
@@ -204,7 +214,7 @@ class _HomePageState extends State<HomePage>
             unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.normal,
             ),
-            tabs: categories.map((cat) => Tab(text: cat)).toList(),
+            tabs: categories.map((cat) => Tab(text: cat.tr())).toList(),
           ),
         ),
         body: AnimatedContainer(
@@ -222,8 +232,8 @@ class _HomePageState extends State<HomePage>
           child: SafeArea(
               child: Column(children: [
             const SizedBox(height: 10),
-            const Text(
-              "Desligar som em:",
+            Text(
+              'shutdown_timer'.tr(),
               style: TextStyle(color: Colors.white60),
             ),
             const SizedBox(height: 8),

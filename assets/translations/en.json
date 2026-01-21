@@ -1,0 +1,14 @@
+{
+    "app_title": "Focus Sounds",
+    "shutdown_timer": "Turn off sounds in:",
+    "limit_reached": "You can play a maximum of 2 sounds at the same time",
+    "no_sounds_timer": "Please, select at least one sound before",
+    "timer_set": "Timer set for {} minutes",
+    "active_sounds": "Active Sounds",
+    "sounds_playing": "{} sound(s) playing",
+    "Chuva": "Rain",
+    "Natureza": "Nature",
+    "Fogo": "Fire",
+    "Vento": "Wind",
+    "Fogueira na floresta": "Forest Fireplace"
+}

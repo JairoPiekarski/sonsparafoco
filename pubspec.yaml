@@ -12,6 +12,7 @@ dependencies:
   shared_preferences: ^2.5.4
   audio_service: ^0.18.18
   just_audio: ^0.10.5
+  easy_localization: ^3.0.7
 
 dev_dependencies: 
   flutter_test:
@@ -21,3 +22,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/
+    - assets/translations/

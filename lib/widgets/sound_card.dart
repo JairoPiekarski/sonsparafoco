@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/sound_model.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SoundCard extends StatefulWidget {
   final SoundModel sound;
@@ -96,7 +97,7 @@ class _SoundCardState extends State<SoundCard>
               ),
               const SizedBox(height: 12),
               Text(
-                widget.sound.title,
+                widget.sound.title.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

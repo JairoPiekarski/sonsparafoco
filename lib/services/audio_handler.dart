@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   // Mapa para tocar vários sons ao mesmo tempo internamente
@@ -34,6 +35,12 @@ class MyAudioHandler extends BaseAudioHandler {
     _updateGlobalState();
   }
 
+  Future<void> stopAllWithFade() async {
+    final fadeFutures =
+        _players.keys.toList().map((fileName) => stopSoundWithFade(fileName));
+    await Future.wait(fadeFutures);
+  }
+
   // Método para a HomePage usar quando ligar um som
   Future<void> startSound(String fileName, double volume) async {
     if (_players.containsKey(fileName)) return;
@@ -61,6 +68,16 @@ class MyAudioHandler extends BaseAudioHandler {
       await player.dispose();
     }
     _updateGlobalState();
+  }
+
+  @override
+  Future<dynamic> customAction(String name,
+      [Map<String, dynamic>? extras]) async {
+    if (name == 'stopAllWithFade') {
+      await stopAllWithFade();
+      return true;
+    }
+    return super.customAction(name, extras);
   }
 
   // Comandos da Notificação (O que acontece quando clica no botão da barra do Android)
@@ -118,8 +135,8 @@ class MyAudioHandler extends BaseAudioHandler {
       mediaItem.add(MediaItem(
         id: 'sons_foco',
         album: 'Seu App de Foco',
-        title: 'Sons Ativos',
-        artist: '${_players.length} som(ns) tocando',
+        title: 'active_sounds'.tr(),
+        artist: 'sounds_playing'.tr(args: [_players.length.toString()]),
       ));
     }
   }

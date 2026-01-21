@@ -1,0 +1,14 @@
+{
+    "app_title": "Sons para Focar",
+    "shutdown_timer": "Desligar som em:",
+    "limit_reached": "Você pode tocar no máximo 2 sons ao mesmo tempo",
+    "no_sounds_timer": "Por favor, selecione ao menos um som para tocar primeiro",
+    "timer_set": "Timer definido para {} minutos",
+    "active_sounds": "Sons Ativos",
+    "sounds_playing": "{} som(ns) tocando",
+    "Chuva": "Chuva",
+    "Natureza": "Natureza",
+    "Fogo": "Fogo",
+    "Vento": "Vento",
+    "Fogueira na floresta": "Fogueira na floresta"
+}
