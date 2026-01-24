@@ -13,8 +13,11 @@ dependencies:
   audio_service: ^0.18.18
   just_audio: ^0.10.5
   easy_localization: ^3.0.7
+  flutter_native_splash: ^2.4.0
 
 dev_dependencies: 
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
   flutter_test:
     sdk: flutter
 
@@ -23,3 +26,20 @@ flutter:
   assets:
     - assets/sounds/
     - assets/translations/
+    - assets/icon/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon_full.png"
+
+  adaptive_icon_background: "assets/icon/app_icon_full.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_transparent.png"
+
+flutter_native_splash:
+  color: "#0F2027"
+  image: "assets/icon/app_icon_transparent.png"
+
+  android_12:
+    image: "assets/icon/app_icon_transparent.png"
+    color: "#0F2027"

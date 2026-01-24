@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'services/audio_handler.dart';
 import 'screens/home_page.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 late MyAudioHandler audioHandler;
 
 Future<void> main() async {
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  try {
     await EasyLocalization.ensureInitialized();
 
     // Inicializar o serviço de audio e guardar variável global
@@ -29,7 +32,12 @@ Future<void> main() async {
       fallbackLocale: const Locale('en'),
       child: const CalmApp(),
     ));
+
+    Future.microtask(() {
+      FlutterNativeSplash.remove();
+    });
   } catch (e) {
+    FlutterNativeSplash.remove();
     debugPrint("Erro na inicialização do áudio: $e");
   }
 }
@@ -48,7 +56,7 @@ class CalmApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0F0F0F),
       ),
-      home: HomePage(),
+      home: const HomePage(),
     );
   }
 }
