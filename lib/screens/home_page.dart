@@ -6,6 +6,7 @@ import '../widgets/sound_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/sound_data.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -177,7 +178,6 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     final categories = allSounds.map((s) => s.category).toSet().toList();
-
     final Map<String, List<Color>> categoryGradients = {
       'Chuva': [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
       'Natureza': [const Color(0xFF134E5E), const Color(0xFF71B280)],
@@ -238,37 +238,8 @@ class _HomePageState extends State<HomePage>
           ),
           child: SafeArea(
               child: Column(children: [
-            const SizedBox(height: 10),
-            Text(
-              'shutdown_timer'.tr(),
-              style: TextStyle(color: Colors.white60),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _botaoRapido(0.1),
-                _botaoRapido(30),
-                _botaoRapido(60),
-                if (_remaningSeconds > 0)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.timer_off,
-                      color: Colors.redAccent,
-                    ),
-                    onPressed: () {
-                      _timer?.cancel();
-                      setState(() {
-                        _remaningSeconds = 0;
-                      });
-                    },
-                  )
-              ],
-            ),
-            const Divider(
-              height: 20,
-              color: Colors.white10,
-            ),
+            _buildTimerHeader(),
+            const Divider(height: 20, color: Colors.white10),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -277,7 +248,8 @@ class _HomePageState extends State<HomePage>
                       .where((sound) => sound.category == categoryName)
                       .toList();
 
-                  return GridView.builder(
+                  return AnimationLimiter(
+                      child: GridView.builder(
                     padding: const EdgeInsets.all(16.0),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -290,23 +262,69 @@ class _HomePageState extends State<HomePage>
                     itemBuilder: (context, index) {
                       final sound = filteredSounds[index];
 
-                      return SoundCard(
-                        sound: sound,
-                        color: _getCategoryColor(sound.category),
-                        isPlaying: _selectedSounds.contains(sound.path),
-                        onTap: () => _togglePlay(sound.path),
-                        volume: _individualVolumes[sound.path] ?? 0.5,
-                        onVolumeChanged: (newVolume) =>
-                            _onVolumeSliderChanged(sound.path, newVolume),
+                      return AnimationConfiguration.staggeredGrid(
+                        position: index,
+                        duration: const Duration(milliseconds: 500),
+                        columnCount: 2,
+                        child: ScaleAnimation(
+                          scale: 0.5,
+                          child: FadeInAnimation(
+                            child: SoundCard(
+                              sound: sound,
+                              color: _getCategoryColor(sound.category),
+                              isPlaying: _selectedSounds.contains(sound.path),
+                              onTap: () => _togglePlay(sound.path),
+                              volume: _individualVolumes[sound.path] ?? 0.5,
+                              onVolumeChanged: (newVolume) =>
+                                  _onVolumeSliderChanged(sound.path, newVolume),
+                            ),
+                          ),
+                        ),
                       );
                     },
-                  );
+                  ));
                 }).toList(),
               ),
-            ),
+            )
           ])),
         ),
       ),
+    );
+  }
+
+  Widget _buildTimerHeader() {
+    return Column(
+      children: [
+        const SizedBox(
+          height: 10,
+        ),
+        Text(
+          'shutdown_timer'.tr(),
+          style: const TextStyle(color: Colors.white60),
+        ),
+        const SizedBox(
+          height: 8,
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _botaoRapido(0.1),
+            _botaoRapido(30),
+            _botaoRapido(60),
+            if (_remaningSeconds > 0)
+              IconButton(
+                icon: const Icon(
+                  Icons.timer_off,
+                  color: Colors.redAccent,
+                ),
+                onPressed: () {
+                  _timer?.cancel();
+                  setState(() => _remaningSeconds = 0);
+                },
+              )
+          ],
+        )
+      ],
     );
   }
 
