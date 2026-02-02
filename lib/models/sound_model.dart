@@ -4,6 +4,8 @@ class SoundModel {
   final String icon;
   final String path;
   final String category;
+  final bool isPremium;
+  final String source;
 
   SoundModel({
     required this.id,
@@ -11,5 +13,7 @@ class SoundModel {
     required this.icon,
     required this.path,
     required this.category,
+    required this.isPremium,
+    required this.source
   });
 }

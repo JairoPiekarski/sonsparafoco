@@ -1,14 +1,42 @@
 {
-    "app_title": "Focus Sounds",
-    "shutdown_timer": "Turn off sounds in:",
-    "limit_reached": "You can play a maximum of 2 sounds at the same time",
-    "no_sounds_timer": "Please, select at least one sound before",
-    "timer_set": "Timer set for {} minutes",
-    "active_sounds": "Active Sounds",
-    "sounds_playing": "{} sound(s) playing",
-    "Chuva": "Rain",
-    "Natureza": "Nature",
-    "Fogo": "Fire",
-    "Vento": "Wind",
-    "Fogueira na floresta": "Forest Fireplace"
+    "ui": {
+        "app_title": "Focus Sounds",
+        "shutdown_timer": "Turn off sound in:",
+        "active_sounds": "Active Sounds",
+        "sounds_playing": "{} sound(s) playing",
+        "premium_title": "Full Experience",
+        "premium_description": "Unlock all exclusive sounds and remove ads forever.",
+        "premium_button": "Go Premium now",
+        "maybe_later": "Maybe later"
+    },
+    "alerts": {
+        "limit_reached": "You can play a maximum of 2 sounds at the same time",
+        "no_sounds_timer": "Please select at least one sound first",
+        "timer_set": "Timer set for {} minutes"
+    },
+    "categories": {
+        "foco": "Focus",
+        "natureza": "Nature",
+        "chuva": "Rain",
+        "fogo": "Fire",
+        "ambiente": "Ambience"
+    },
+    "sounds": {
+        "babbling_brook": "Babbling Brook",
+        "ocean_waves": "Ocean Waves",
+        "bird_chirping": "Bird Chirping",
+        "bird_songs": "Bird Songs",
+        "crowd_noise": "Crowd Noise",
+        "deep_water_brown": "Deep Water Brown Noise",
+        "footsteps_snow": "Footsteps on Snow",
+        "heavy_rainfall": "Heavy Rainfall",
+        "rain_balcony": "Rain on Balcony",
+        "rain_metal_roof": "Rain on Metal Roof",
+        "rain_gutter": "Rain in a Gutter",
+        "summer_forest": "Summer Forest Ambience",
+        "running_water": "Running Water",
+        "seagulls": "Seagulls",
+        "vintage_film": "Vintage Film Reel",
+        "walking_gravel": "Walking on Gravel"
+    }
 }

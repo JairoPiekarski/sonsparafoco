@@ -1,9 +1,9 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
-  // Mapa para tocar vários sons ao mesmo tempo internamente
   final Map<String, AudioPlayer> _players = {};
 
   MyAudioHandler() {
@@ -11,56 +11,61 @@ class MyAudioHandler extends BaseAudioHandler {
   }
 
   Future<void> setVolume(String fileName, double volume) async {
-    _players[fileName]?.setVolume(volume);
+    await _players[fileName]?.setVolume(volume);
   }
 
+  // Fade Out aprimorado para evitar erros de dispose prematuro
   Future<void> stopSoundWithFade(String fileName) async {
     final player = _players[fileName];
     if (player == null) return;
 
-    double currentVolume = player.volume;
-    const steps = 10;
-    final stepValue = currentVolume / steps;
+    try {
+      double currentVolume = player.volume;
+      const steps = 10;
+      final stepValue = currentVolume / steps;
 
-    for (int i = 0; i < steps; i++) {
-      currentVolume -= stepValue;
-      if (currentVolume < 0) currentVolume = 0;
-      await player.setVolume(currentVolume);
-      await Future.delayed(const Duration(milliseconds: 100));
+      for (int i = 0; i < steps; i++) {
+        currentVolume -= stepValue;
+        if (currentVolume < 0) currentVolume = 0;
+        await player.setVolume(currentVolume);
+        await Future.delayed(const Duration(milliseconds: 50)); // Reduzido para ser mais ágil
+      }
+    } catch (e) {
+      debugPrint("Erro no fade out: $e");
+    } finally {
+      await player.stop();
+      await player.dispose();
+      _players.remove(fileName);
+      _updateGlobalState();
     }
-
-    await player.stop();
-    await player.dispose();
-    _players.remove(fileName);
-    _updateGlobalState();
   }
 
   Future<void> stopAllWithFade() async {
-    final fadeFutures =
-        _players.keys.toList().map((fileName) => stopSoundWithFade(fileName));
-    await Future.wait(fadeFutures);
+    // Usamos uma cópia das chaves para evitar erro de concorrência ao remover do mapa
+    final keys = _players.keys.toList();
+    await Future.wait(keys.map((fileName) => stopSoundWithFade(fileName)));
   }
 
-  // Método para a HomePage usar quando ligar um som
   Future<void> startSound(String fileName, double volume) async {
     if (_players.containsKey(fileName)) return;
 
     final player = AudioPlayer();
     try {
-      // O just_audio precisa do caminho completo
+      // Carregamento otimizado para OGG
       await player.setAsset(fileName);
-      await player.setLoopMode(LoopMode.one);
+      await player.setLoopMode(LoopMode.all); // Loop total do arquivo
       await player.setVolume(volume);
+      
+      // Inicia o som
       player.play();
 
       _players[fileName] = player;
       _updateGlobalState();
     } catch (e) {
-      print("Erro ao tocar: $e");
+      debugPrint("Erro ao carregar asset $fileName: $e");
     }
   }
 
-  // Método para a HomePage usar quando desligar um som
   Future<void> stopSound(String fileName) async {
     final player = _players.remove(fileName);
     if (player != null) {
@@ -71,8 +76,7 @@ class MyAudioHandler extends BaseAudioHandler {
   }
 
   @override
-  Future<dynamic> customAction(String name,
-      [Map<String, dynamic>? extras]) async {
+  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async {
     if (name == 'stopAllWithFade') {
       await stopAllWithFade();
       return true;
@@ -80,23 +84,25 @@ class MyAudioHandler extends BaseAudioHandler {
     return super.customAction(name, extras);
   }
 
-  // Comandos da Notificação (O que acontece quando clica no botão da barra do Android)
+  // Comandos da Notificação
   @override
   Future<void> stop() async {
+    // IMPORTANTE: Antes de dar dispose, paramos todos
     for (var player in _players.values) {
       await player.stop();
       await player.dispose();
     }
     _players.clear();
     _updateGlobalState();
-    // Aqui você também pode avisar a UI para desmarcar os cards,
-    // mas vamos focar na notificação primeiro.
+    
+    // Notifica o sistema que o serviço parou
+    await super.stop();
   }
 
   @override
   Future<void> pause() async {
     for (var player in _players.values) {
-      player.pause();
+      await player.pause();
     }
     _updateGlobalState();
   }
@@ -104,40 +110,34 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> play() async {
     for (var player in _players.values) {
-      player.play();
+      await player.play();
     }
     _updateGlobalState();
   }
 
-  // Atualiza como a notificação aparece no Android
   void _updateGlobalState() {
     final isPlaying = _players.values.any((p) => p.playing);
     final hasActiveSounds = _players.isNotEmpty;
 
     playbackState.add(PlaybackState(
       controls: [
-        if (isPlaying)
-          MediaControl.pause
-        else if (hasActiveSounds)
-          MediaControl.play,
+        if (isPlaying) MediaControl.pause else if (hasActiveSounds) MediaControl.play,
         MediaControl.stop,
       ],
-      // Define quais botões aparecem na notificação "encolhida"
       androidCompactActionIndices: const [0, 1],
       playing: isPlaying,
-      processingState: hasActiveSounds
-          ? AudioProcessingState.ready
-          : AudioProcessingState.idle,
+      processingState: hasActiveSounds ? AudioProcessingState.ready : AudioProcessingState.idle,
     ));
 
-    // Informação que aparece na notificação (Título e Subtítulo)
     if (hasActiveSounds) {
       mediaItem.add(MediaItem(
         id: 'sons_foco',
-        album: 'Seu App de Foco',
-        title: 'active_sounds'.tr(),
-        artist: 'sounds_playing'.tr(args: [_players.length.toString()]),
+        album: 'ui.app_title'.tr(), // Usando chave de tradução organizada
+        title: 'ui.active_sounds'.tr(),
+        artist: 'ui.sounds_playing'.tr(args: [_players.length.toString()]),
       ));
+    } else {
+      mediaItem.add(null); // Limpa a notificação se não houver sons
     }
   }
 }

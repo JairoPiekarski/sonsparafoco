@@ -20,11 +20,8 @@ class _HomePageState extends State<HomePage>
   final Set<String> _selectedSounds = {};
   Timer? _timer;
   int _remaningSeconds = 0;
-  final Map<String, double> _individualVolumes = {
-    'rain.mp3': 0.5,
-    'burning-bush.mp3': 0.5,
-    'wind-draft.mp3': 0.5,
-  };
+  final Map<String, double> _individualVolumes = {};
+  bool userIsPremium = false;
 
   late TabController _tabController;
 
@@ -39,6 +36,9 @@ class _HomePageState extends State<HomePage>
         FlutterNativeSplash.remove();
       });
 
+    for (var sound in allSounds) {
+      _individualVolumes[sound.id] = 0.5;
+    }
     _loadVolumes();
 
     final categoriesCount =
@@ -64,7 +64,7 @@ class _HomePageState extends State<HomePage>
   void _startTimer(double minutes) {
     // Se não houver som tocando, não iniciar o temporizador
     if (_selectedSounds.isEmpty) {
-      _showSnackBar('no_sounds_timer'.tr());
+      _showSnackBar('alerts.no_sounds_timer'.tr());
       return;
     }
 
@@ -113,24 +113,28 @@ class _HomePageState extends State<HomePage>
   }
 
   // Função lógica para play/stop
-  Future<void> _togglePlay(String fileName) async {
-    print("--- DEBUG AUDIO ---");
-    print("O que o Flutter recebeu: '$fileName'");
+  Future<void> _togglePlay(String soundID) async {
+    final sound = allSounds.firstWhere((s) => s.id == soundID);
 
-    if (_selectedSounds.contains(fileName)) {
-      await audioHandler.stopSoundWithFade(fileName);
-      setState(() => _selectedSounds.remove(fileName));
+    if (sound.isPremium && !userIsPremium) {
+      _showPremiumModal();
+      return;
+    }
+
+    if (_selectedSounds.contains(soundID)) {
+      await audioHandler.stopSoundWithFade(sound.path);
+      setState(() => _selectedSounds.remove(soundID));
     } else {
       // Limitar a 2 sons simultâneos
       if (_selectedSounds.length >= 2) {
-        _showSnackBar('limit_reached'.tr());
+        _showSnackBar('alerts.limit_reached'.tr());
         return;
       }
 
-      final volume = _individualVolumes[fileName] ?? 0.5;
-      await audioHandler.startSound(fileName, volume);
+      final volume = _individualVolumes[soundID] ?? 0.5;
+      await audioHandler.startSound(sound.path, volume);
 
-      setState(() => _selectedSounds.add(fileName));
+      setState(() => _selectedSounds.add(soundID));
     }
   }
 
@@ -168,6 +172,73 @@ class _HomePageState extends State<HomePage>
     await prefs.setDouble('volume_$fileName', volume);
   }
 
+  // Função do Modal Premium
+  void _showPremiumModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, // Para podermos arredondar os cantos
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A2E), // Uma cor escura e elegante
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Ajusta o tamanho ao conteúdo
+            children: [
+              const Icon(Icons.stars_rounded, color: Colors.amber, size: 60),
+              const SizedBox(height: 16),
+              Text(
+                'ui.premium_title'.tr(), // "Desbloqueie tudo!"
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'ui.premium_description'
+                    .tr(), // "Sons exclusivos e sem anúncios."
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () {
+                  // Aqui depois entrará a lógica de compra
+                  Navigator.pop(context);
+                  _showSnackBar('Em breve: Integração com Google Play!');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black87,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'ui.premium_button'.tr(), // "Seja Premium"
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'ui.maybe_later'.tr(), // "Talvez mais tarde"
+                  style: const TextStyle(color: Colors.white38),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     //_audioPlayer.dispose(); // Liberar recursos do player
@@ -179,9 +250,11 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     final categories = allSounds.map((s) => s.category).toSet().toList();
     final Map<String, List<Color>> categoryGradients = {
-      'Chuva': [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
-      'Natureza': [const Color(0xFF134E5E), const Color(0xFF71B280)],
-      'Fogo': [const Color(0xFFED213A), const Color(0xFF93291E)],
+      'categories.chuva': [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
+      'categories.natureza': [const Color(0xFF134E5E), const Color(0xFF71B280)],
+      'categories.fogo': [const Color(0xFFED213A), const Color(0xFF93291E)],
+      'categories.foco': [const Color(0xFF232526), const Color(0xFF414345)],
+      'categories.ambiente': [const Color(0xFF3E5151), const Color(0xFFDECBA4)],
     };
 
     return DefaultTabController(
@@ -190,7 +263,7 @@ class _HomePageState extends State<HomePage>
         extendBodyBehindAppBar: true,
         appBar: AppBar(
           title: Text(
-            'app_title'.tr(),
+            'ui.app_title'.tr(),
             style: TextStyle(fontWeight: FontWeight.w300),
           ),
           centerTitle: true,
@@ -272,11 +345,12 @@ class _HomePageState extends State<HomePage>
                             child: SoundCard(
                               sound: sound,
                               color: _getCategoryColor(sound.category),
-                              isPlaying: _selectedSounds.contains(sound.path),
-                              onTap: () => _togglePlay(sound.path),
-                              volume: _individualVolumes[sound.path] ?? 0.5,
+                              isPlaying: _selectedSounds.contains(sound.id),
+                              onTap: () => _togglePlay(sound.id),
+                              volume: _individualVolumes[sound.id] ?? 0.5,
                               onVolumeChanged: (newVolume) =>
-                                  _onVolumeSliderChanged(sound.path, newVolume),
+                                  _onVolumeSliderChanged(sound.id, newVolume),
+                              userIsPremium: userIsPremium,
                             ),
                           ),
                         ),
@@ -299,7 +373,7 @@ class _HomePageState extends State<HomePage>
           height: 10,
         ),
         Text(
-          'shutdown_timer'.tr(),
+          'ui.shutdown_timer'.tr(),
           style: const TextStyle(color: Colors.white60),
         ),
         const SizedBox(
@@ -330,12 +404,16 @@ class _HomePageState extends State<HomePage>
 
   Color _getCategoryColor(String category) {
     switch (category) {
-      case 'Chuva':
+      case 'categories.chuva': // Adicione o prefixo
         return Colors.blueAccent;
-      case 'Natureza':
+      case 'categories.natureza':
         return Colors.greenAccent;
-      case 'Fogo':
+      case 'categories.fogo':
         return Colors.orangeAccent;
+      case 'categories.foco':
+        return const Color(0xFF90A4AE);
+      case 'categories.ambiente':
+        return Colors.blueGrey;
       default:
         return Colors.white70;
     }
