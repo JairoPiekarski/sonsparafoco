@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
+import 'package:ambient_sound_app/screens/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../main.dart';
 import '../widgets/sound_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,6 +62,24 @@ class _HomePageState extends State<HomePage>
         });
       }
     });
+  }
+
+  Future<void> verificarAssinatura() async {
+    try {
+      //1. Buscar os produtos configurados
+      Offerings offerings = await Purchases.getOfferings();
+
+      if (offerings.current != null && offerings.current!.monthly != null) {
+        //2. Se estiver certo, abre a tela de compra padrão revenuecat
+        await RevenueCatUI.presentPaywall();
+
+        print("Preço: ${offerings.current!.monthly!.storeProduct.priceString}");
+      } else {
+        print("Nenhum plano mensal ativo encontrado no offering current");
+      }
+    } catch (e) {
+      print("Erro ao carregar compras: $e");
+    }
   }
 
   // Função para iniciar o temporizador
@@ -157,12 +179,22 @@ class _HomePageState extends State<HomePage>
   Future<void> _loadVolumes() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      userIsPremium = prefs.getBool('user_is_premium') ?? false;
+
       for (var fileName in _individualVolumes.keys) {
         double? savedVolume = prefs.getDouble('volume_$fileName');
         if (savedVolume != null) {
           _individualVolumes[fileName] = savedVolume;
         }
       }
+    });
+  }
+
+  Future<void> _completePurchase() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('user_is_premium', true);
+    setState(() {
+      userIsPremium = true;
     });
   }
 
@@ -208,8 +240,9 @@ class _HomePageState extends State<HomePage>
               ElevatedButton(
                 onPressed: () {
                   // Aqui depois entrará a lógica de compra
+                  _completePurchase();
                   Navigator.pop(context);
-                  _showSnackBar('Em breve: Integração com Google Play!');
+                  _showSnackBar('ui.premium_success'.tr());
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
@@ -249,6 +282,7 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     final categories = allSounds.map((s) => s.category).toSet().toList();
+
     final Map<String, List<Color>> categoryGradients = {
       'categories.chuva': [const Color(0xFF1E3C72), const Color(0xFF2A5298)],
       'categories.natureza': [const Color(0xFF134E5E), const Color(0xFF71B280)],
@@ -257,6 +291,10 @@ class _HomePageState extends State<HomePage>
       'categories.ambiente': [const Color(0xFF3E5151), const Color(0xFFDECBA4)],
     };
 
+    // Criamos uma variável para o gradiente atual para simplificar o código abaixo
+    final currentGradient = categoryGradients[categories[_currentTabIndex]] ??
+        [const Color(0xFF0F2027), const Color(0xFF2C5364)];
+
     return DefaultTabController(
       length: categories.length,
       child: Scaffold(
@@ -264,7 +302,7 @@ class _HomePageState extends State<HomePage>
         appBar: AppBar(
           title: Text(
             'ui.app_title'.tr(),
-            style: TextStyle(fontWeight: FontWeight.w300),
+            style: const TextStyle(fontWeight: FontWeight.w300),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -282,18 +320,34 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
               ),
+            IconButton(
+              icon: const Icon(Icons.workspace_premium, color: Colors.amber,),
+              onPressed: () {
+                verificarAssinatura();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsPage(
+                      backgroundGradient: currentGradient,
+                    ),
+                  ),
+                ); // Ponto e vírgula obrigatório aqui
+              },
+            ),
           ],
           bottom: TabBar(
             controller: _tabController,
             isScrollable: true,
             indicatorColor: Colors.orangeAccent,
             indicatorWeight: 3,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.normal,
-            ),
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            unselectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.normal),
             tabs: categories.map((cat) => Tab(text: cat.tr())).toList(),
           ),
         ),
@@ -305,62 +359,67 @@ class _HomePageState extends State<HomePage>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: categoryGradients[categories[_currentTabIndex]] ??
-                  [const Color(0xFF0F2027), const Color(0xFF2C5364)],
+              colors: currentGradient,
             ),
           ),
           child: SafeArea(
-              child: Column(children: [
-            _buildTimerHeader(),
-            const Divider(height: 20, color: Colors.white10),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: categories.map((categoryName) {
-                  final filteredSounds = allSounds
-                      .where((sound) => sound.category == categoryName)
-                      .toList();
+            child: Column(
+              children: [
+                _buildTimerHeader(),
+                const Divider(height: 20, color: Colors.white10),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: categories.map((categoryName) {
+                      final filteredSounds = allSounds
+                          .where((sound) => sound.category == categoryName)
+                          .toList();
 
-                  return AnimationLimiter(
-                      child: GridView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.85,
-                    ),
-                    itemCount: filteredSounds.length,
-                    itemBuilder: (context, index) {
-                      final sound = filteredSounds[index];
-
-                      return AnimationConfiguration.staggeredGrid(
-                        position: index,
-                        duration: const Duration(milliseconds: 500),
-                        columnCount: 2,
-                        child: ScaleAnimation(
-                          scale: 0.5,
-                          child: FadeInAnimation(
-                            child: SoundCard(
-                              sound: sound,
-                              color: _getCategoryColor(sound.category),
-                              isPlaying: _selectedSounds.contains(sound.id),
-                              onTap: () => _togglePlay(sound.id),
-                              volume: _individualVolumes[sound.id] ?? 0.5,
-                              onVolumeChanged: (newVolume) =>
-                                  _onVolumeSliderChanged(sound.id, newVolume),
-                              userIsPremium: userIsPremium,
-                            ),
+                      return AnimationLimiter(
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(16.0),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.85,
                           ),
+                          itemCount: filteredSounds.length,
+                          itemBuilder: (context, index) {
+                            final sound = filteredSounds[index];
+
+                            return AnimationConfiguration.staggeredGrid(
+                              position: index,
+                              duration: const Duration(milliseconds: 500),
+                              columnCount: 2,
+                              child: ScaleAnimation(
+                                scale: 0.5,
+                                child: FadeInAnimation(
+                                  child: SoundCard(
+                                    sound: sound,
+                                    color: _getCategoryColor(sound.category),
+                                    isPlaying:
+                                        _selectedSounds.contains(sound.id),
+                                    onTap: () => _togglePlay(sound.id),
+                                    volume: _individualVolumes[sound.id] ?? 0.5,
+                                    onVolumeChanged: (newVolume) =>
+                                        _onVolumeSliderChanged(
+                                            sound.id, newVolume),
+                                    userIsPremium: userIsPremium,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       );
-                    },
-                  ));
-                }).toList(),
-              ),
-            )
-          ])),
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

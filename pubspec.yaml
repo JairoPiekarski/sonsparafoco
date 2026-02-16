@@ -15,6 +15,9 @@ dependencies:
   easy_localization: ^3.0.7
   flutter_native_splash: ^2.4.0
   flutter_staggered_animations: ^1.1.1
+  url_launcher: ^6.3.1
+  purchases_flutter: ^9.10.8
+  purchases_ui_flutter: ^9.10.8
 
 dev_dependencies: 
   flutter_launcher_icons: ^0.13.1

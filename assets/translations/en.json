@@ -4,10 +4,16 @@
         "shutdown_timer": "Turn off sound in:",
         "active_sounds": "Active Sounds",
         "sounds_playing": "{} sound(s) playing",
+        "premium_success": "Congrats! You now have unlimited access. ✨",
         "premium_title": "Full Experience",
         "premium_description": "Unlock all exclusive sounds and remove ads forever.",
         "premium_button": "Go Premium now",
-        "maybe_later": "Maybe later"
+        "maybe_later": "Maybe later",
+        "settings": "Settings",
+        "subscription": "Subscription",
+        "credits": "Audio Credits",
+        "legal": "Legal",
+        "privacy_policy": "Privacy Policy"
     },
     "alerts": {
         "limit_reached": "You can play a maximum of 2 sounds at the same time",

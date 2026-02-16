@@ -4,10 +4,16 @@
         "shutdown_timer": "Desligar som em:",
         "active_sounds": "Sons Ativos",
         "sounds_playing": "{} som(ns) tocando",
+        "premium_success": "Parabéns! Agora você tem acesso ilimitado. ✨",
         "premium_title": "Experiência Completa",
         "premium_description": "Desbloqueie todos os sons exclusivos e remova os anúncios para sempre.",
         "premium_button": "Seja Premium agora",
-        "maybe_later": "Talvez mais tarde"
+        "maybe_later": "Talvez mais tarde",
+        "settings": "Configurações",
+        "subscription": "Assinatura",
+        "credits": "Créditos de Áudio",
+        "legal": "Informações Legais",
+        "privacy_policy": "Política de Privacidade"
     },
     "alerts": {
         "limit_reached": "Você pode tocar no máximo 2 sons ao mesmo tempo",

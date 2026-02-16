@@ -43,3 +43,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Chaves de assinatura e segredos do Android
+*.keystore
+*.jks
+*.p12
+*.pem
+*.pub
+android/key.properties
+android/app/google-services.json
+
+# Se você baixar o JSON de credenciais do RevenueCat/Google Play
+service-account-google.json
+
+# Local env files (onde você pode guardar chaves de API)
+.env*
+
+# Cache e arquivos temporários do Gradle
+.gradle/
+android/.gradle/
