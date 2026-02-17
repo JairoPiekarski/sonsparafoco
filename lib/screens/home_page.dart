@@ -27,6 +27,7 @@ class _HomePageState extends State<HomePage>
   final Map<String, double> _individualVolumes = {};
   bool userIsPremium = false;
   double? _selectedTimerDuration;
+  bool _isGlobalPaused = false;
 
   late TabController _tabController;
 
@@ -72,7 +73,9 @@ class _HomePageState extends State<HomePage>
       CustomerInfo customerInfo = await Purchases.getCustomerInfo();
 
       setState(() {
-        userIsPremium = customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ?? false;
+        userIsPremium =
+            customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ??
+                false;
       });
 
       final prefs = await SharedPreferences.getInstance();
@@ -93,7 +96,8 @@ class _HomePageState extends State<HomePage>
       CustomerInfo customerInfo = await Purchases.getCustomerInfo();
 
       // 3. Verificamos se o plano 'pro' está ativo no objeto customerInfo
-      if (customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ?? false) {
+      if (customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ??
+          false) {
         setState(() {
           userIsPremium = true;
         });
@@ -155,14 +159,16 @@ class _HomePageState extends State<HomePage>
   }
 
   // Função para volumes individuais dos sons
-  void _onVolumeSliderChanged(String fileName, double newVolume) {
-    audioHandler.setVolume(fileName, newVolume);
+  void _onVolumeSliderChanged(String soundID, double newVolume) {
+    final sound = allSounds.firstWhere((s) => s.id == soundID);
+
+    audioHandler.setVolume(sound.path, newVolume);
 
     setState(() {
-      _individualVolumes[fileName] = newVolume;
+      _individualVolumes[soundID] = newVolume;
     });
 
-    _saveVolumes(fileName, newVolume);
+    _saveVolumes(soundID, newVolume);
   }
 
   // Função lógica para play/stop
@@ -192,8 +198,17 @@ class _HomePageState extends State<HomePage>
       }
 
       final volume = _individualVolumes[soundID] ?? 0.5;
-      await audioHandler.startSound(sound.path, volume);
 
+      if (_isGlobalPaused) {
+        setState(() => _isGlobalPaused = false);
+
+        for (var id in _selectedSounds) {
+          final activeSound = allSounds.firstWhere((s) => s.id == id);
+          await audioHandler.startSound(activeSound.path, _individualVolumes[id] ?? 0.5);
+        }
+      }
+
+      await audioHandler.startSound(sound.path, volume);
       setState(() => _selectedSounds.add(soundID));
     }
   }
@@ -276,7 +291,7 @@ class _HomePageState extends State<HomePage>
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () async {                  
+                onPressed: () async {
                   Navigator.pop(context);
                   await verificarAssinatura();
                 },
@@ -401,63 +416,76 @@ class _HomePageState extends State<HomePage>
               colors: currentGradient,
             ),
           ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildTimerHeader(),
-                const Divider(height: 20, color: Colors.white10),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: categories.map((categoryName) {
-                      final filteredSounds = allSounds
-                          .where((sound) => sound.category == categoryName)
-                          .toList();
+          child: Stack(
+            children: [
+              SafeArea (
+                child: Column(
+                  children: [
+                    _buildTimerHeader(),
+                    const Divider(height: 20, color: Colors.white10),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: categories.map((categoryName) {
+                          final filteredSounds = allSounds
+                              .where((sound) => sound.category == categoryName)
+                              .toList();
 
-                      return AnimationLimiter(
-                        child: GridView.builder(
-                          padding: const EdgeInsets.all(16.0),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: filteredSounds.length,
-                          itemBuilder: (context, index) {
-                            final sound = filteredSounds[index];
-
-                            return AnimationConfiguration.staggeredGrid(
-                              position: index,
-                              duration: const Duration(milliseconds: 500),
-                              columnCount: 2,
-                              child: ScaleAnimation(
-                                scale: 0.5,
-                                child: FadeInAnimation(
-                                  child: SoundCard(
-                                    sound: sound,
-                                    color: _getCategoryColor(sound.category),
-                                    isPlaying:
-                                        _selectedSounds.contains(sound.id),
-                                    onTap: () => _togglePlay(sound.id),
-                                    volume: _individualVolumes[sound.id] ?? 0.5,
-                                    onVolumeChanged: (newVolume) =>
-                                        _onVolumeSliderChanged(
-                                            sound.id, newVolume),
-                                    userIsPremium: userIsPremium,
-                                  ),
-                                ),
+                          return AnimationLimiter(
+                            child: GridView.builder(
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, _selectedSounds.isEmpty ? 16 : 110),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 0.85,
                               ),
-                            );
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                              itemCount: filteredSounds.length,
+                              itemBuilder: (context, index) {
+                                final sound = filteredSounds[index];
+
+                                return AnimationConfiguration.staggeredGrid(
+                                  position: index,
+                                  duration: const Duration(milliseconds: 500),
+                                  columnCount: 2,
+                                  child: ScaleAnimation(
+                                    scale: 0.5,
+                                    child: FadeInAnimation(
+                                      child: SoundCard(
+                                        sound: sound,
+                                        color:
+                                            _getCategoryColor(sound.category),
+                                        isPlaying:
+                                            _selectedSounds.contains(sound.id),
+                                        onTap: () => _togglePlay(sound.id),
+                                        volume:
+                                            _individualVolumes[sound.id] ?? 0.5,
+                                        onVolumeChanged: (newVolume) =>
+                                            _onVolumeSliderChanged(
+                                                sound.path, newVolume),
+                                        userIsPremium: userIsPremium,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: _buildMiniPlayer(),
+              )
+            ],
           ),
         ),
       ),
@@ -519,20 +547,130 @@ class _HomePageState extends State<HomePage>
 
   // Widget para criar botões rápidos de temporizador
   Widget _botaoRapido(double minutes) {
-    final bool isSelected = _selectedTimerDuration == minutes && _remaningSeconds > 0;
+    final bool isSelected =
+        _selectedTimerDuration == minutes && _remaningSeconds > 0;
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: ActionChip(
-          label: Text('$minutes min'),
-          backgroundColor: isSelected
-            ? Colors.orangeAccent
-            : Colors.white.withAlpha(15),
-          onPressed: () => _startTimer(minutes),
-          labelStyle: TextStyle(
-            color: isSelected ? Colors.black : Colors.white70,
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            label: Text('$minutes min'),
+            backgroundColor:
+                isSelected ? Colors.orangeAccent : Colors.white.withAlpha(15),
+            onPressed: () => _startTimer(minutes),
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.black : Colors.white70,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            )));
+  }
+
+  Widget _buildMiniPlayer() {
+    if (_selectedSounds.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 60,
+      decoration: BoxDecoration(
+          color: Colors.grey[900]?.withValues(),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.orangeAccent.withValues()),
+          boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 10)]),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isGlobalPaused = !_isGlobalPaused;
+                if (_isGlobalPaused) {
+                  for (var soundID in _selectedSounds) {
+                    final sound = allSounds.firstWhere((s) => s.id == soundID);
+                    audioHandler.stopSoundWithFade(sound.path);
+                  }
+                } else {
+                  for (var soundID in _selectedSounds) {
+                    final sound = allSounds.firstWhere((s) => s.id == soundID);
+                    audioHandler.startSound(sound.path, _individualVolumes[soundID] ?? 0.5);
+                  }
+                }
+              });
+            },
+            child: Icon(
+              _isGlobalPaused ? Icons.play_circle_filled : Icons.pause_circle_filled,
+              color: Colors.orangeAccent,
+              size: 40,
+            ),
+          ),
+          const SizedBox(
+            width: 12,
+          ),
+          Expanded(
+            child: Row(
+              children: _selectedSounds.map((id) {
+                final sound = allSounds.firstWhere((s) => s.id == id);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Text(
+                    sound.icon,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.tune,
+              color: Colors.white70,
+            ),
+            onPressed: () {
+              _showVolumesModal();
+            },
           )
-        ));
+        ],
+      ),
+    );
+  }
+
+  void _showVolumesModal() {
+    showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (context) {
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30))
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Mix Ativo",
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20,),
+                ..._selectedSounds.map((id) {
+                  final sound = allSounds.firstWhere((s) => s.id == id);
+                  return ListTile(
+                    leading: Text(sound.icon, style: const TextStyle(fontSize: 24)),
+                    title: Text(sound.title.tr(), style: const TextStyle(color: Colors.white)),
+                    subtitle: Slider(
+                      value: _individualVolumes[id] ?? 0.5,
+                      activeColor: Colors.orangeAccent,
+                      onChanged: (val) {
+                        _onVolumeSliderChanged(id, val);
+                        setModalState(() {});
+                      },
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 20,),
+              ],
+            ),
+          );
+        }
+      );
+    });
   }
 }
