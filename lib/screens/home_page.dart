@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage>
   int _remaningSeconds = 0;
   final Map<String, double> _individualVolumes = {};
   bool userIsPremium = false;
+  double? _selectedTimerDuration;
 
   late TabController _tabController;
 
@@ -62,23 +63,51 @@ class _HomePageState extends State<HomePage>
         });
       }
     });
+
+    _atualizarStatusPremiumReal();
+  }
+
+  Future<void> _atualizarStatusPremiumReal() async {
+    try {
+      CustomerInfo customerInfo = await Purchases.getCustomerInfo();
+
+      setState(() {
+        userIsPremium = customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ?? false;
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('user_is_premium', userIsPremium);
+    } catch (e) {
+      debugPrint("Erro ao checar assinatura real: $e");
+    }
   }
 
   Future<void> verificarAssinatura() async {
     try {
-      //1. Buscar os produtos configurados
-      Offerings offerings = await Purchases.getOfferings();
+      // 1. Abre o Paywall oficial.
+      // O 'presentPaywall' apenas abre a interface.
+      await RevenueCatUI.presentPaywall();
 
-      if (offerings.current != null && offerings.current!.monthly != null) {
-        //2. Se estiver certo, abre a tela de compra padrão revenuecat
-        await RevenueCatUI.presentPaywall();
+      // 2. Após o Paywall ser fechado (seja por compra ou cancelamento),
+      // nós buscamos os dados MAIS RECENTES do servidor do RevenueCat.
+      CustomerInfo customerInfo = await Purchases.getCustomerInfo();
 
-        print("Preço: ${offerings.current!.monthly!.storeProduct.priceString}");
+      // 3. Verificamos se o plano 'pro' está ativo no objeto customerInfo
+      if (customerInfo.entitlements.all['Piekarski Studio Pro']?.isActive ?? false) {
+        setState(() {
+          userIsPremium = true;
+        });
+        _showSnackBar('ui.premium_success'.tr());
+
+        // Opcional: Salva no SharedPreferences para persistência local rápida
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('user_is_premium', true);
       } else {
-        print("Nenhum plano mensal ativo encontrado no offering current");
+        print("Usuário fechou o paywall ou a compra não foi concluída.");
       }
     } catch (e) {
-      print("Erro ao carregar compras: $e");
+      print("Erro ao processar assinatura: $e");
+      _showSnackBar('Erro ao processar compra. Tente novamente.');
     }
   }
 
@@ -92,6 +121,7 @@ class _HomePageState extends State<HomePage>
 
     _timer?.cancel(); // Cancelar qualquer timer existente
     setState(() {
+      _selectedTimerDuration = minutes;
       _remaningSeconds = (minutes * 60).round();
     });
 
@@ -104,6 +134,7 @@ class _HomePageState extends State<HomePage>
 
       if (_remaningSeconds == 0) {
         timer.cancel();
+        setState(() => _selectedTimerDuration = null);
         _stopAllSounds();
       }
     });
@@ -146,6 +177,13 @@ class _HomePageState extends State<HomePage>
     if (_selectedSounds.contains(soundID)) {
       await audioHandler.stopSoundWithFade(sound.path);
       setState(() => _selectedSounds.remove(soundID));
+
+      if (_selectedSounds.isEmpty && _timer != null) {
+        _timer?.cancel();
+        _remaningSeconds = 0;
+        _selectedTimerDuration = null;
+        debugPrint("Timer cancelado pois não tem sons ativos");
+      }
     } else {
       // Limitar a 2 sons simultâneos
       if (_selectedSounds.length >= 2) {
@@ -238,11 +276,9 @@ class _HomePageState extends State<HomePage>
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () {
-                  // Aqui depois entrará a lógica de compra
-                  _completePurchase();
+                onPressed: () async {                  
                   Navigator.pop(context);
-                  _showSnackBar('ui.premium_success'.tr());
+                  await verificarAssinatura();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
@@ -321,7 +357,10 @@ class _HomePageState extends State<HomePage>
                 ),
               ),
             IconButton(
-              icon: const Icon(Icons.workspace_premium, color: Colors.amber,),
+              icon: const Icon(
+                Icons.workspace_premium,
+                color: Colors.amber,
+              ),
               onPressed: () {
                 verificarAssinatura();
               },
@@ -480,16 +519,20 @@ class _HomePageState extends State<HomePage>
 
   // Widget para criar botões rápidos de temporizador
   Widget _botaoRapido(double minutes) {
+    final bool isSelected = _selectedTimerDuration == minutes && _remaningSeconds > 0;
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: ActionChip(
           label: Text('$minutes min'),
-          backgroundColor: Colors.white.withAlpha(15),
+          backgroundColor: isSelected
+            ? Colors.orangeAccent
+            : Colors.white.withAlpha(15),
           onPressed: () => _startTimer(minutes),
-          labelStyle: const TextStyle(
-            color: Colors.white70,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.black : Colors.white70,
             fontSize: 12,
-          ),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          )
         ));
   }
 }
